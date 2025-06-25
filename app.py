@@ -47,8 +47,34 @@ if __name__ == '__main__':
 @app.route('/students')
 def students():
     conn = sqlite3.connect("database.db")
+
+
+    @app.route('/add-student', methods=['GET', 'POST'])
+def add_student():
+    if request.method == 'POST':
+        data = (
+            request.form['student_id'],
+            request.form['name'],
+            request.form['reg_date'],
+            request.form['completion_date'],
+            request.form['column1'],
+            float(request.form['balance_bf']),
+            float(request.form['total_balance']),
+            float(request.form['amount_paid']),
+            float(request.form['balance'])
+        )
+        with sqlite3.connect("database.db") as conn:
+            conn.execute("""INSERT INTO students (
+                student_id, name, reg_date, completion_date, column1,
+                balance_bf, total_balance, amount_paid, balance
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
+        return redirect('/students')
+    return render_template('add_student.html')
+
     students = conn.execute("SELECT * FROM students").fetchall()
     return render_template("students.html", students=students)
+
+
 
 
 
