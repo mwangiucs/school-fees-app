@@ -1,13 +1,19 @@
 import os
-from flask import Flask, render_template, request, redirect, flash, send_file
+import uuid
 import sqlite3
 import pandas as pd
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, flash, send_file
 
 app = Flask(__name__)
 app.secret_key = 'supersecret'
 
+# Always use full path to prevent database duplication
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "database.db")
+
 def init_db():
-    with sqlite3.connect("database.db") as conn:
+    with sqlite3.connect(DB_FILE) as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,8 +28,26 @@ def init_db():
                 balance REAL
             )
         """)
-        def init_deposits_table():
-    with sqlite3.connect("database.db") as conn:
+
+def init_receipts_table():
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS receipts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT,
+                receipt_no TEXT,
+                student_id TEXT,
+                name TEXT,
+                old_balance REAL,
+                amount_paid REAL,
+                new_balance REAL,
+                received_by TEXT,
+                deposited INTEGER DEFAULT 0
+            )
+        """)
+
+def init_deposits_table():
+    with sqlite3.connect(DB_FILE) as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS deposits (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,32 +60,13 @@ def init_db():
             )
         """)
 
-
-
-def init_receipts_table():
-    with sqlite3.connect("database.db") as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS receipts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT,
-                receipt_no TEXT,
-                student_id TEXT,
-                name TEXT,
-                old_balance REAL,
-                amount_paid REAL,
-                new_balance REAL,
-                received_by TEXT
-            )
-        """)
-
-
 @app.route('/')
 def home():
     return render_template('home.html')
 
 @app.route('/students')
 def students():
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect(DB_FILE)
     students = conn.execute("SELECT * FROM students").fetchall()
     return render_template("students.html", students=students)
 
@@ -85,7 +90,7 @@ def add_student():
             to_float(request.form['amount_paid']),
             to_float(request.form['balance'])
         )
-        with sqlite3.connect("database.db") as conn:
+        with sqlite3.connect(DB_FILE) as conn:
             conn.execute("""INSERT INTO students (
                 student_id, name, reg_date, completion_date, column1,
                 balance_bf, total_balance, amount_paid, balance
@@ -95,7 +100,7 @@ def add_student():
 
 @app.route('/edit-student/<int:id>', methods=['GET', 'POST'])
 def edit_student(id):
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect(DB_FILE)
     if request.method == 'POST':
         data = (
             request.form['student_id'],
@@ -120,7 +125,7 @@ def edit_student(id):
 
 @app.route('/delete-student/<int:id>')
 def delete_student(id):
-    with sqlite3.connect("database.db") as conn:
+    with sqlite3.connect(DB_FILE) as conn:
         conn.execute("DELETE FROM students WHERE id=?", (id,))
     return redirect('/students')
 
@@ -132,7 +137,7 @@ def import_excel():
             try:
                 df = pd.read_excel(file)
                 records = df.values.tolist()
-                with sqlite3.connect("database.db") as conn:
+                with sqlite3.connect(DB_FILE) as conn:
                     conn.executemany("""
                         INSERT INTO students (
                             student_id, name, reg_date, completion_date, column1,
@@ -147,14 +152,11 @@ def import_excel():
 
 @app.route('/export')
 def export_excel():
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect(DB_FILE)
     df = pd.read_sql_query("SELECT * FROM students", conn)
     file_path = "students_export.xlsx"
     df.to_excel(file_path, index=False)
     return send_file(file_path, as_attachment=True)
-
-from datetime import datetime
-import uuid
 
 @app.route('/make-payment', methods=['GET', 'POST'])
 def make_payment():
@@ -164,7 +166,7 @@ def make_payment():
         amount_paid = float(request.form['amount_paid'])
         received_by = request.form['received_by']
 
-        conn = sqlite3.connect("database.db")
+        conn = sqlite3.connect(DB_FILE)
         cur = conn.cursor()
         cur.execute("SELECT * FROM students WHERE student_id=?", (student_id,))
         student = cur.fetchone()
@@ -175,20 +177,14 @@ def make_payment():
             receipt_no = "RCPT-" + str(uuid.uuid4())[:8]
             date = datetime.now().strftime("%Y-%m-%d")
 
-            # Insert into receipts
             cur.execute("""
                 INSERT INTO receipts (date, receipt_no, student_id, name, old_balance, amount_paid, new_balance, received_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (date, receipt_no, student_id, student[2], old_balance, amount_paid, new_balance, received_by))
 
-            # Update student balance
             cur.execute("UPDATE students SET balance=? WHERE student_id=?", (new_balance, student_id))
-
             conn.commit()
-            conn.close()
-            flash("Payment recorded successfully!", "success")
             return redirect(f'/print-receipt/{cur.lastrowid}')
-
         else:
             flash("Student ID not found.", "danger")
 
@@ -197,9 +193,8 @@ def make_payment():
 @app.route('/receipts')
 def receipts():
     query = request.args.get('query', '').strip()
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-
     if query:
         receipts = cur.execute("""
             SELECT * FROM receipts
@@ -208,31 +203,29 @@ def receipts():
         """, (f'%{query}%', f'%{query}%', f'%{query}%')).fetchall()
     else:
         receipts = cur.execute("SELECT * FROM receipts ORDER BY id DESC").fetchall()
-
     return render_template("receipts.html", receipts=receipts, query=query)
+
+@app.route('/print-receipt/<int:id>')
+def print_receipt(id):
+    conn = sqlite3.connect(DB_FILE)
+    receipt = conn.execute("SELECT * FROM receipts WHERE id=?", (id,)).fetchone()
+    return render_template("print_receipt.html", receipt=receipt)
 
 @app.route('/deposit-dashboard')
 def deposit_dashboard():
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-
     total_collected = cur.execute("SELECT SUM(amount_paid) FROM receipts").fetchone()[0] or 0
     total_deposited = cur.execute("SELECT SUM(amount) FROM deposits").fetchone()[0] or 0
     to_deposit = total_collected - total_deposited
-
     deposits = cur.execute("SELECT * FROM deposits ORDER BY id DESC").fetchall()
-
     return render_template("deposit_dashboard.html", to_deposit=to_deposit,
                            total_collected=total_collected,
                            total_deposited=total_deposited,
                            deposits=deposits)
-
-
 
 if __name__ == '__main__':
     init_db()
     init_receipts_table()
     init_deposits_table()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
-
-
