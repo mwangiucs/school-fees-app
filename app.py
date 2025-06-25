@@ -179,6 +179,19 @@ def make_payment():
 
     return render_template('make_payment.html', student=student)
 
+@app.route('/receipts')
+def receipts():
+    conn = sqlite3.connect("database.db")
+    receipts = conn.execute("SELECT * FROM receipts ORDER BY id DESC").fetchall()
+    return render_template("receipts.html", receipts=receipts)
+    
+@app.route('/print-receipt/<int:id>')
+def print_receipt(id):
+    conn = sqlite3.connect("database.db")
+    receipt = conn.execute("SELECT * FROM receipts WHERE id=?", (id,)).fetchone()
+    return render_template("print_receipt.html", receipt=receipt)
+
+
 
 if __name__ == '__main__':
     init_db()
