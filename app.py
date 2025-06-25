@@ -173,7 +173,8 @@ def make_payment():
             conn.commit()
             conn.close()
             flash("Payment recorded successfully!", "success")
-            return redirect('/students')
+            return redirect(f'/print-receipt/{cur.lastrowid}')
+
         else:
             flash("Student ID not found.", "danger")
 
