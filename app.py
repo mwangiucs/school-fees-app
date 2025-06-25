@@ -1,7 +1,13 @@
+import os
 from flask import Flask, render_template, request, redirect
 import sqlite3
 
 app = Flask(__name__)
+...
+if __name__ == '__main__':
+    init_db()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+
 
 def init_db():
     with sqlite3.connect("database.db") as conn:
