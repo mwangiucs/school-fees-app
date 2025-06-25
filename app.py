@@ -74,6 +74,37 @@ def add_student():
     students = conn.execute("SELECT * FROM students").fetchall()
     return render_template("students.html", students=students)
 
+@app.route('/edit-student/<int:id>', methods=['GET', 'POST'])
+def edit_student(id):
+    conn = sqlite3.connect("database.db")
+    if request.method == 'POST':
+        data = (
+            request.form['student_id'],
+            request.form['name'],
+            request.form['reg_date'],
+            request.form['completion_date'],
+            request.form['column1'],
+            float(request.form['balance_bf']),
+            float(request.form['total_balance']),
+            float(request.form['amount_paid']),
+            float(request.form['balance']),
+            id
+        )
+        conn.execute("""UPDATE students SET
+            student_id=?, name=?, reg_date=?, completion_date=?, column1=?,
+            balance_bf=?, total_balance=?, amount_paid=?, balance=?
+            WHERE id=?""", data)
+        conn.commit()
+        return redirect('/students')
+
+    student = conn.execute("SELECT * FROM students WHERE id=?", (id,)).fetchone()
+    return render_template('edit_student.html', student=student)
+
+@app.route('/delete-student/<int:id>')
+def delete_student(id):
+    with sqlite3.connect("database.db") as conn:
+        conn.execute("DELETE FROM students WHERE id=?", (id,))
+    return redirect('/students')
 
 
 
