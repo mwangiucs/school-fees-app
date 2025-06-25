@@ -1,1 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Make Payment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h2 class="text-success">💰 Make a Payment</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Student ID</label>
+            <input type="text" name="student_id" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Amount Paid</label>
+            <input type="number" name="amount_paid" step="0.01" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Received By</label>
+            <input type="text" name="received_by" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit Payment</button>
+        <a href="/students" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+</body>
+</html>
 
