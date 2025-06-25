@@ -3,12 +3,8 @@ from flask import Flask, render_template, request, redirect
 import sqlite3
 
 app = Flask(__name__)
-...
-if __name__ == '__main__':
-    init_db()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
 
-
+# ✅ Initialize database if not exists
 def init_db():
     with sqlite3.connect("database.db") as conn:
         conn.execute("""
@@ -26,16 +22,19 @@ def init_db():
             )
         """)
 
+# ✅ Home page
 @app.route('/')
 def home():
     return render_template('home.html')
 
+# ✅ List of students
 @app.route('/students')
 def students():
     conn = sqlite3.connect("database.db")
     students = conn.execute("SELECT * FROM students").fetchall()
     return render_template("students.html", students=students)
 
+# ✅ Add student
 @app.route('/add-student', methods=['GET', 'POST'])
 def add_student():
     if request.method == 'POST':
@@ -51,13 +50,16 @@ def add_student():
             float(request.form['balance'])
         )
         with sqlite3.connect("database.db") as conn:
-            conn.execute("""INSERT INTO students (
-                student_id, name, reg_date, completion_date, column1,
-                balance_bf, total_balance, amount_paid, balance
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
+            conn.execute("""
+                INSERT INTO students (
+                    student_id, name, reg_date, completion_date, column1,
+                    balance_bf, total_balance, amount_paid, balance
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, data)
         return redirect('/students')
     return render_template('add_student.html')
 
+# ✅ Edit student
 @app.route('/edit-student/<int:id>', methods=['GET', 'POST'])
 def edit_student(id):
     conn = sqlite3.connect("database.db")
@@ -74,22 +76,26 @@ def edit_student(id):
             float(request.form['balance']),
             id
         )
-        conn.execute("""UPDATE students SET
-            student_id=?, name=?, reg_date=?, completion_date=?, column1=?,
-            balance_bf=?, total_balance=?, amount_paid=?, balance=?
-            WHERE id=?""", data)
+        conn.execute("""
+            UPDATE students SET
+                student_id=?, name=?, reg_date=?, completion_date=?, column1=?,
+                balance_bf=?, total_balance=?, amount_paid=?, balance=?
+            WHERE id=?
+        """, data)
         conn.commit()
         return redirect('/students')
 
     student = conn.execute("SELECT * FROM students WHERE id=?", (id,)).fetchone()
     return render_template('edit_student.html', student=student)
 
+# ✅ Delete student
 @app.route('/delete-student/<int:id>')
 def delete_student(id):
     with sqlite3.connect("database.db") as conn:
         conn.execute("DELETE FROM students WHERE id=?", (id,))
     return redirect('/students')
 
+# ✅ Run app
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
