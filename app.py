@@ -23,6 +23,24 @@ def init_db():
             )
         """)
 
+
+def init_receipts_table():
+    with sqlite3.connect("database.db") as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS receipts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT,
+                receipt_no TEXT,
+                student_id TEXT,
+                name TEXT,
+                old_balance REAL,
+                amount_paid REAL,
+                new_balance REAL,
+                received_by TEXT
+            )
+        """)
+
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -123,5 +141,6 @@ def export_excel():
 
 if __name__ == '__main__':
     init_db()
+    init_receipts_table()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
 
