@@ -5,13 +5,21 @@ app = Flask(__name__)
 
 def init_db():
     with sqlite3.connect("database.db") as conn:
-        conn.execute("""CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            class TEXT,
-            amount_paid INTEGER,
-            balance INTEGER
-        )""")
+       conn.execute("""
+    CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT,
+        name TEXT,
+        reg_date TEXT,
+        completion_date TEXT,
+        column1 TEXT,
+        balance_bf REAL,
+        total_balance REAL,
+        amount_paid REAL,
+        balance REAL
+    )
+""")
+
 
 @app.route('/')
 def index():
@@ -34,3 +42,13 @@ def add():
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=10000)
+
+
+@app.route('/students')
+def students():
+    conn = sqlite3.connect("database.db")
+    students = conn.execute("SELECT * FROM students").fetchall()
+    return render_template("students.html", students=students)
+
+
+
