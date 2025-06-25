@@ -22,6 +22,20 @@ def init_db():
                 balance REAL
             )
         """)
+        def init_deposits_table():
+    with sqlite3.connect("database.db") as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS deposits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                deposit_id TEXT,
+                date TEXT,
+                receipt_start TEXT,
+                receipt_end TEXT,
+                amount REAL,
+                balance_after REAL
+            )
+        """)
+
 
 
 def init_receipts_table():
@@ -197,11 +211,28 @@ def receipts():
 
     return render_template("receipts.html", receipts=receipts, query=query)
 
+@app.route('/deposit-dashboard')
+def deposit_dashboard():
+    conn = sqlite3.connect("database.db")
+    cur = conn.cursor()
+
+    total_collected = cur.execute("SELECT SUM(amount_paid) FROM receipts").fetchone()[0] or 0
+    total_deposited = cur.execute("SELECT SUM(amount) FROM deposits").fetchone()[0] or 0
+    to_deposit = total_collected - total_deposited
+
+    deposits = cur.execute("SELECT * FROM deposits ORDER BY id DESC").fetchall()
+
+    return render_template("deposit_dashboard.html", to_deposit=to_deposit,
+                           total_collected=total_collected,
+                           total_deposited=total_deposited,
+                           deposits=deposits)
 
 
 
 if __name__ == '__main__':
     init_db()
     init_receipts_table()
+    init_deposits_table()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+
 
