@@ -5,41 +5,32 @@ app = Flask(__name__)
 
 def init_db():
     with sqlite3.connect("database.db") as conn:
-       conn.execute("""
-    CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id TEXT,
-        name TEXT,
-        reg_date TEXT,
-        completion_date TEXT,
-        column1 TEXT,
-        balance_bf REAL,
-        total_balance REAL,
-        amount_paid REAL,
-        balance REAL
-    )
-""")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS students (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id TEXT,
+                name TEXT,
+                reg_date TEXT,
+                completion_date TEXT,
+                column1 TEXT,
+                balance_bf REAL,
+                total_balance REAL,
+                amount_paid REAL,
+                balance REAL
+            )
+        """)
 
 @app.route('/')
 def home():
     return render_template('home.html')
 
-
-@app.route('/')
-def index():
-    conn = sqlite3.connect("database.db")
-    students = conn.execute("SELECT * FROM students").fetchall()
-    return render_template('index.html', students=students)
-
-
-
-
 @app.route('/students')
 def students():
     conn = sqlite3.connect("database.db")
+    students = conn.execute("SELECT * FROM students").fetchall()
+    return render_template("students.html", students=students)
 
-
-    @app.route('/add-student', methods=['GET', 'POST'])
+@app.route('/add-student', methods=['GET', 'POST'])
 def add_student():
     if request.method == 'POST':
         data = (
@@ -60,9 +51,6 @@ def add_student():
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
         return redirect('/students')
     return render_template('add_student.html')
-
-    students = conn.execute("SELECT * FROM students").fetchall()
-    return render_template("students.html", students=students)
 
 @app.route('/edit-student/<int:id>', methods=['GET', 'POST'])
 def edit_student(id):
@@ -96,19 +84,6 @@ def delete_student(id):
         conn.execute("DELETE FROM students WHERE id=?", (id,))
     return redirect('/students')
 
-
-
-@app.route('/add-sample-student')
-def add_sample_student():
-    with sqlite3.connect("database.db") as conn:
-        conn.execute("""INSERT INTO students (
-            student_id, name, reg_date, completion_date, column1,
-            balance_bf, total_balance, amount_paid, balance
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
-        ("S001", "John Doe", "2023-01-15", "2026-12-01", "N/A", 500.0, 10000.0, 3000.0, 7000.0))
-    return "Sample student added"
-
-
-
-
-
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)
