@@ -20,6 +20,10 @@ def init_db():
     )
 """)
 
+@app.route('/')
+def home():
+    return render_template('home.html')
+
 
 @app.route('/')
 def index():
@@ -27,21 +31,7 @@ def index():
     students = conn.execute("SELECT * FROM students").fetchall()
     return render_template('index.html', students=students)
 
-@app.route('/add', methods=['POST'])
-def add():
-    name = request.form['name']
-    class_name = request.form['class']
-    amount_paid = int(request.form['amount_paid'])
-    total_fees = 10000  # Customize this value
-    balance = total_fees - amount_paid
-    with sqlite3.connect("database.db") as conn:
-        conn.execute("INSERT INTO students (name, class, amount_paid, balance) VALUES (?, ?, ?, ?)",
-                     (name, class_name, amount_paid, balance))
-    return redirect('/')
 
-if __name__ == '__main__':
-    init_db()
-    app.run(host='0.0.0.0', port=10000)
 
 
 @app.route('/students')
