@@ -108,4 +108,17 @@ def delete_student(id):
 
 
 
+@app.route('/add-sample-student')
+def add_sample_student():
+    with sqlite3.connect("database.db") as conn:
+        conn.execute("""INSERT INTO students (
+            student_id, name, reg_date, completion_date, column1,
+            balance_bf, total_balance, amount_paid, balance
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
+        ("S001", "John Doe", "2023-01-15", "2026-12-01", "N/A", 500.0, 10000.0, 3000.0, 7000.0))
+    return "Sample student added"
+
+
+
+
 
