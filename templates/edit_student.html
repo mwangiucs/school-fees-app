@@ -1,1 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Student</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h2 class="text-warning mb-4">✏️ Edit Student</h2>
+    <form method="POST">
+        {% set fields = ['student_id', 'name', 'reg_date', 'completion_date', 'column1', 'balance_bf', 'total_balance', 'amount_paid', 'balance'] %}
+        {% for i in range(fields|length) %}
+        <div class="mb-3">
+            <label class="form-label">{{ fields[i].replace('_', ' ').title() }}</label>
+            <input type="text" name="{{ fields[i] }}" class="form-control" value="{{ student[i+1] }}" required>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Update</button>
+        <a href="/students" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+</body>
+</html>
 
