@@ -139,6 +139,47 @@ def export_excel():
     df.to_excel(file_path, index=False)
     return send_file(file_path, as_attachment=True)
 
+from datetime import datetime
+import uuid
+
+@app.route('/make-payment', methods=['GET', 'POST'])
+def make_payment():
+    student = None
+    if request.method == 'POST':
+        student_id = request.form['student_id']
+        amount_paid = float(request.form['amount_paid'])
+        received_by = request.form['received_by']
+
+        conn = sqlite3.connect("database.db")
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM students WHERE student_id=?", (student_id,))
+        student = cur.fetchone()
+
+        if student:
+            old_balance = student[9]
+            new_balance = old_balance - amount_paid
+            receipt_no = "RCPT-" + str(uuid.uuid4())[:8]
+            date = datetime.now().strftime("%Y-%m-%d")
+
+            # Insert into receipts
+            cur.execute("""
+                INSERT INTO receipts (date, receipt_no, student_id, name, old_balance, amount_paid, new_balance, received_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (date, receipt_no, student_id, student[2], old_balance, amount_paid, new_balance, received_by))
+
+            # Update student balance
+            cur.execute("UPDATE students SET balance=? WHERE student_id=?", (new_balance, student_id))
+
+            conn.commit()
+            conn.close()
+            flash("Payment recorded successfully!", "success")
+            return redirect('/students')
+        else:
+            flash("Student ID not found.", "danger")
+
+    return render_template('make_payment.html', student=student)
+
+
 if __name__ == '__main__':
     init_db()
     init_receipts_table()
