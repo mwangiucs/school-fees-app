@@ -192,60 +192,6 @@ def print_receipt(id):
     conn.close()
     return render_template("print_receipt.html", receipt=receipt)
 
-@app.route('/init-db')
-def init_db():
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS students (
-                id SERIAL PRIMARY KEY,
-                student_id TEXT,
-                name TEXT,
-                reg_date TEXT,
-                completion_date TEXT,
-                column1 TEXT,
-                balance_bf REAL,
-                total_balance REAL,
-                amount_paid REAL,
-                balance REAL
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS receipts (
-                id SERIAL PRIMARY KEY,
-                date TEXT,
-                receipt_no TEXT,
-                student_id TEXT,
-                name TEXT,
-                old_balance REAL,
-                amount_paid REAL,
-                new_balance REAL,
-                received_by TEXT,
-                deposited INTEGER DEFAULT 0
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS deposits (
-                id SERIAL PRIMARY KEY,
-                deposit_id TEXT,
-                date TEXT,
-                receipt_start TEXT,
-                receipt_end TEXT,
-                amount REAL,
-                balance_after REAL
-            )
-        """)
-
-        conn.commit()
-        conn.close()
-        return "✅ Tables created successfully!"
-
-    except Exception as e:
-        return f"❌ Error: {e}"
 
 
 if __name__ == '__main__':
