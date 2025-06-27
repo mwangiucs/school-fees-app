@@ -136,35 +136,53 @@ def export_excel():
 @app.route('/make-payment', methods=['GET', 'POST'])
 def make_payment():
     student = None
+    receipt_no = None
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Generate next receipt number
+    cur.execute("SELECT receipt_no FROM receipts ORDER BY id DESC LIMIT 1")
+    last = cur.fetchone()
+    if last:
+        try:
+            receipt_no = str(int(last[0]) + 1)
+        except:
+            receipt_no = str(int('17255') + 1)
+    else:
+        receipt_no = "17255"
+
     if request.method == 'POST':
         student_id = request.form['student_id']
         amount_paid = float(request.form['amount_paid'])
         received_by = request.form['received_by']
 
-        conn = get_connection()
-        cur = conn.cursor()
         cur.execute("SELECT * FROM students WHERE student_id=%s", (student_id,))
         student = cur.fetchone()
 
         if student:
             old_balance = student[9]
             new_balance = old_balance - amount_paid
-            receipt_no = "RCPT-" + str(uuid.uuid4())[:8]
             date = datetime.now().strftime("%Y-%m-%d")
 
             cur.execute("""
-                INSERT INTO receipts (date, receipt_no, student_id, name, old_balance, amount_paid, new_balance, received_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (date, receipt_no, student_id, student[2], old_balance, amount_paid, new_balance, received_by))
+                INSERT INTO receipts (
+                    date, receipt_no, student_id, name,
+                    old_balance, amount_paid, new_balance, received_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (date, receipt_no, student_id, student[2],
+                  old_balance, amount_paid, new_balance, received_by))
 
             cur.execute("UPDATE students SET balance=%s WHERE student_id=%s", (new_balance, student_id))
             conn.commit()
             conn.close()
+            flash(f"✅ Payment recorded. Receipt: {receipt_no}", "success")
             return redirect('/receipts')
         else:
-            flash("Student ID not found.", "danger")
+            flash("❌ Student ID not found.", "danger")
 
-    return render_template('make_payment.html', student=student)
+    conn.close()
+    return render_template('make_payment.html', student=student, receipt_no=receipt_no)
 
 @app.route('/receipts')
 def receipts():
@@ -265,6 +283,63 @@ def deposit_dashboard():
         to_deposit=to_deposit,
         deposits=deposits
     )
+
+@app.route('/edit-receipt/<int:id>', methods=['GET', 'POST'])
+def edit_receipt(id):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM receipts WHERE id=%s", (id,))
+    receipt = cur.fetchone()
+
+    if receipt[9] == 1:
+        flash("❌ Cannot edit a deposited receipt.", "danger")
+        return redirect('/receipts')
+
+    if request.method == 'POST':
+        amount_paid = float(request.form['amount_paid'])
+        new_balance = float(request.form['new_balance'])
+
+        cur.execute("""
+            UPDATE receipts SET amount_paid=%s, new_balance=%s WHERE id=%s
+        """, (amount_paid, new_balance, id))
+        conn.commit()
+        flash("✅ Receipt updated.", "success")
+        return redirect('/receipts')
+
+    return render_template('edit_receipt.html', receipt=receipt)
+@app.route('/delete-receipt/<int:id>')
+def delete_receipt(id):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT deposited FROM receipts WHERE id=%s", (id,))
+    result = cur.fetchone()
+    if result and result[0] == 1:
+        flash("❌ Cannot delete a deposited receipt.", "danger")
+    else:
+        cur.execute("DELETE FROM receipts WHERE id=%s", (id,))
+        conn.commit()
+        flash("🗑️ Receipt deleted.", "success")
+
+    return redirect('/receipts')
+    
+@app.route('/api/student/<student_id>')
+def get_student_by_id(student_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT student_id, name, balance FROM students WHERE student_id = %s", (student_id,))
+    student = cur.fetchone()
+    conn.close()
+
+    if student:
+        return {
+            "student_id": student[0],
+            "name": student[1],
+            "balance": float(student[2])
+        }
+    return {}
+
 
 
 
