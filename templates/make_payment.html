@@ -1,38 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Make Payment</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Make Payment</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-<div class="container mt-4">
-    <h2 class="text-success">💰 Make a Payment</h2>
+<div class="container mt-5">
+  <h2 class="mb-4 text-success">💳 Make Payment</h2>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-    <form method="POST">
-        <div class="mb-3">
-            <label class="form-label">Student ID</label>
-            <input type="text" name="student_id" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Amount Paid</label>
-            <input type="number" name="amount_paid" step="0.01" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Received By</label>
-            <input type="text" name="received_by" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Submit Payment</button>
-        <a href="/students" class="btn btn-secondary">Cancel</a>
-    </form>
+  <form method="POST">
+    <div class="mb-3">
+      <label for="student_id" class="form-label">Student ID</label>
+      <input type="text" class="form-control" name="student_id" id="student_id" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Student Name</label>
+      <input type="text" class="form-control" id="student_name" disabled>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Current Balance</label>
+      <input type="text" class="form-control" id="current_balance" disabled>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Receipt Number</label>
+      <input type="text" class="form-control" value="{{ receipt_no }}" disabled>
+    </div>
+
+    <div class="mb-3">
+      <label for="amount_paid" class="form-label">Amount Paid</label>
+      <input type="number" class="form-control" name="amount_paid" id="amount_paid" step="0.01" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">New Balance</label>
+      <input type="text" class="form-control" id="new_balance" disabled>
+    </div>
+
+    <div class="mb-3">
+      <label for="received_by" class="form-label">Received By</label>
+      <input type="text" class="form-control" name="received_by" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit Payment</button>
+    <a href="/" class="btn btn-secondary">Cancel</a>
+  </form>
 </div>
+
+<script>
+  let balance = 0;
+
+  // Fetch student data on ID input
+  $('#student_id').on('change', function () {
+    const studentId = $(this).val();
+    if (!studentId) return;
+
+    $.getJSON(`/api/student/${studentId}`, function (data) {
+      if (data.name) {
+        $('#student_name').val(data.name);
+        $('#current_balance').val(data.balance.toFixed(2));
+        balance = data.balance;
+        calculateNewBalance();
+      } else {
+        $('#student_name').val('');
+        $('#current_balance').val('');
+        $('#new_balance').val('');
+        balance = 0;
+      }
+    });
+  });
+
+  // Calculate new balance
+  $('#amount_paid').on('input', function () {
+    calculateNewBalance();
+  });
+
+  function calculateNewBalance() {
+    const amountPaid = parseFloat($('#amount_paid').val()) || 0;
+    const newBalance = balance - amountPaid;
+    $('#new_balance').val(newBalance.toFixed(2));
+  }
+</script>
 </body>
 </html>
-
