@@ -194,21 +194,21 @@ def print_receipt(id):
 
 @app.route('/make-deposit', methods=['GET', 'POST'])
 def make_deposit():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_connection()
     cur = conn.cursor()
 
     # Get all un-deposited receipts
-    receipts = cur.execute("SELECT * FROM receipts WHERE deposited = 0 ORDER BY id").fetchall()
+    cur.execute("SELECT * FROM receipts WHERE deposited = 0 ORDER BY id ASC")
+    receipts = cur.fetchall()
 
     if not receipts:
-        flash("No receipts available for deposit.", "warning")
+        flash("No un-deposited receipts available.", "warning")
         return redirect('/deposit-dashboard')
 
-    total_amount = sum(r[6] for r in receipts)
-    receipt_start = receipts[0][2]  # first receipt_no
-    receipt_end = receipts[-1][2]   # last receipt_no
-    balance_after = cur.execute("SELECT SUM(amount_paid) FROM receipts WHERE deposited = 1").fetchone()[0] or 0
-    balance_after += total_amount
+    total_amount = sum(r[6] for r in receipts)  # amount_paid is at index 6
+    receipt_start = receipts[0][2]  # receipt_no
+    receipt_end = receipts[-1][2]   # receipt_no
+    balance_after = total_amount + (cur.execute("SELECT SUM(amount) FROM deposits").fetchone()[0] or 0)
 
     if request.method == 'POST':
         deposit_id = "DEP-" + str(uuid.uuid4())[:8]
@@ -216,20 +216,26 @@ def make_deposit():
 
         cur.execute("""
             INSERT INTO deposits (deposit_id, date, receipt_start, receipt_end, amount, balance_after)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (deposit_id, date, receipt_start, receipt_end, total_amount, balance_after))
 
-        # Mark those receipts as deposited
+        # Mark all these receipts as deposited
         cur.execute("UPDATE receipts SET deposited = 1 WHERE deposited = 0")
 
         conn.commit()
-        flash(f"Deposit {deposit_id} recorded successfully!", "success")
+        conn.close()
+        flash(f"✅ Deposit {deposit_id} recorded successfully!", "success")
         return redirect('/deposit-dashboard')
 
-    return render_template("make_deposit.html", total_amount=total_amount,
-                           receipt_start=receipt_start,
-                           receipt_end=receipt_end,
-                           balance_after=balance_after)
+    conn.close()
+    return render_template(
+        'make_deposit.html',
+        total_amount=total_amount,
+        receipt_start=receipt_start,
+        receipt_end=receipt_end,
+        balance_after=balance_after
+    )
+
 
 @app.route('/deposit-dashboard')
 def deposit_dashboard():
