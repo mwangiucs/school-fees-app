@@ -231,6 +231,21 @@ def make_deposit():
                            receipt_end=receipt_end,
                            balance_after=balance_after)
 
+@app.route('/deposit-dashboard')
+def deposit_dashboard():
+    conn = sqlite3.connect("database.db")
+    cur = conn.cursor()
+
+    total_collected = cur.execute("SELECT SUM(amount_paid) FROM receipts").fetchone()[0] or 0
+    total_deposited = cur.execute("SELECT SUM(amount) FROM deposits").fetchone()[0] or 0
+    to_deposit = total_collected - total_deposited
+
+    deposits = cur.execute("SELECT * FROM deposits ORDER BY id DESC").fetchall()
+
+    return render_template("deposit_dashboard.html", to_deposit=to_deposit,
+                           total_collected=total_collected,
+                           total_deposited=total_deposited,
+                           deposits=deposits)
 
 
 
