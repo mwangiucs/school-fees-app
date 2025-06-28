@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = 'supersecret'
 
 # PostgreSQL connection for Railway (replace with os.environ.get in production)
-DATABASE_URL = "postgresql://postgres:francisN1!982@db.feznbkitostzcrecuvqb.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://neondb_owner:npg_Rfaxqk3CyA1e@ep-autumn-dew-a8xinosz-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 
 def get_connection():
