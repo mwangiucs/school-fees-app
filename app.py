@@ -9,7 +9,8 @@ app = Flask(__name__)
 app.secret_key = 'supersecret'
 
 # PostgreSQL connection for Railway (replace with os.environ.get in production)
-DATABASE_URL = "postgresql://postgres:[YOUR-PASSWORD]@db.feznbkitostzcrecuvqb.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres:francisN1!982@db.feznbkitostzcrecuvqb.supabase.co:5432/postgres?sslmode=require
+"
 
 
 def get_connection():
